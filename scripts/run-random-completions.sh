@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-count="${1:-1}"
+count="${1:-50}"
 
 if ! [[ "$count" =~ ^[0-9]+$ ]] || [[ "$count" -lt 1 ]]; then
-  echo "Usage: $0 <positive-run-count>"
+  echo "Usage: $0 [positive-run-count]"
   exit 1
 fi
 

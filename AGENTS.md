@@ -9,7 +9,7 @@
 - Sign out: `bun run auth:signout`
 - Request one completion: `bun run complete --file fixtures/sample.ts --line 8 --character 2`
 - Request one completion and simulate acceptance: `bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-first`
-- Run repeated weighted completion checks: `./scripts/run-random-completions.sh 10`
+- Run repeated weighted completion checks: `./scripts/run-random-completions.sh`
 
 ## Important project rules from existing docs
 - Runtime is Bun-first. Normal usage should run `src/cli.ts` directly through Bun; do not require a prebuild for local workflows.
@@ -63,6 +63,7 @@ This repo is a thin CLI harness around `@github/copilot-language-server`.
 - Language support is extension-based in `detectLanguageId()`. If a new fixture type is added, update that mapping and the shell script together.
 - Raw JSON-RPC logging is intentional and useful for debugging protocol regressions. Avoid removing it unless the task is specifically about changing logging behavior.
 - `printHelp()` in `src/cli.ts` still mentions `node dist/cli.js`; if updating CLI UX or docs, keep runtime examples aligned with the Bun-first workflow.
+- The random completion smoke-test script now defaults to 50 runs. When using it for an agent test run, always pass `1` as the first argument to keep runtime short: `./scripts/run-random-completions.sh 1`.
 
 ## When changing behavior
 - If you change command names or flags, update both `README.md` and `scripts/run-random-completions.sh`.
