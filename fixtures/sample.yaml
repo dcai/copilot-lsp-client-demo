@@ -1,0 +1,6 @@
+app:
+  name: demo-app
+  env: dev
+  features:
+    logging: true
+    caching: 
