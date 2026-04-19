@@ -8,14 +8,14 @@ type CliOptions = {
   character?: number;
   workspace?: string;
   editorVersion: string;
-  acceptFirst: boolean;
+  acceptRate: number;
 };
 
 const parseArgs = (argv: string[]): { command: string; options: CliOptions } => {
   const [command = 'help', ...rest] = argv;
   const options: CliOptions = {
     editorVersion: '0.12.1',
-    acceptFirst: false,
+    acceptRate: 0,
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -53,7 +53,13 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
     }
 
     if (current === '--accept-first') {
-      options.acceptFirst = true;
+      options.acceptRate = 100;
+      continue;
+    }
+
+    if (current === '--accept-rate' && next) {
+      options.acceptRate = Number(next);
+      index += 1;
       continue;
     }
   }
@@ -63,15 +69,16 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
 
 const printHelp = (): void => {
   console.log(`Usage:
-  node dist/cli.js auth:signin
-  node dist/cli.js auth:signout
-  node dist/cli.js auth:status
-  node dist/cli.js complete --file fixtures/sample.ts --line 13 --character 2 [--accept-first]
+  bun src/cli.ts auth:signin
+  bun src/cli.ts auth:signout
+  bun src/cli.ts auth:status
+  bun src/cli.ts complete --file fixtures/sample.ts --line 13 --character 2 [--accept-first | --accept-rate <0-100>]
 
 Options:
   --workspace <path>       Workspace root. Defaults to current directory.
-  --editor-version <ver>   Editor version reported to Copilot. Defaults to 0.10.0.
-  --accept-first           Accept the first completion after showing it.
+  --editor-version <ver>   Editor version reported to Copilot. Defaults to 0.12.1.
+  --accept-first           Always accept the first completion after showing it.
+  --accept-rate <0-100>    Accept the first completion at the given percentage rate.
 `);
 };
 
@@ -97,6 +104,14 @@ const requireNumberOption = (value: number | undefined, flagName: string): numbe
   return value as number;
 };
 
+const requireAcceptRateOption = (value: number): number => {
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    throw new Error('Invalid --accept-rate. Expected a number between 0 and 100.');
+  }
+
+  return value;
+};
+
 const printStatus = (status: unknown): void => {
   console.log('Status:');
   console.log(JSON.stringify(status, null, 2));
@@ -108,6 +123,18 @@ const pickFirstItem = (items: InlineCompletionItem[]): InlineCompletionItem => {
   }
 
   return items[0];
+};
+
+const shouldAcceptCompletion = (acceptRate: number): boolean => {
+  if (acceptRate <= 0) {
+    return false;
+  }
+
+  if (acceptRate >= 100) {
+    return true;
+  }
+
+  return Math.random() < acceptRate / 100;
 };
 
 const run = async (): Promise<void> => {
@@ -166,6 +193,7 @@ const run = async (): Promise<void> => {
       const filePath = requireFileOption(options.file);
       const line = requireNumberOption(options.line, '--line');
       const character = requireNumberOption(options.character, '--character');
+      const acceptRate = requireAcceptRateOption(options.acceptRate);
       const document = await client.openDocument(filePath);
       const result = await client.requestInlineCompletion({
         uri: document.uri,
@@ -181,9 +209,11 @@ const run = async (): Promise<void> => {
         client.notifyCompletionShown(firstItem);
         console.log('Marked first completion as shown.');
 
-        if (options.acceptFirst) {
+        if (shouldAcceptCompletion(acceptRate)) {
           await client.acceptCompletion(firstItem);
-          console.log('Accepted first completion via workspace/executeCommand.');
+          console.log(`Accepted first completion via workspace/executeCommand (rate=${acceptRate}%).`);
+        } else if (acceptRate > 0) {
+          console.log(`Skipped accepting first completion (rate=${acceptRate}%).`);
         }
       }
 

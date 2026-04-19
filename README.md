@@ -44,7 +44,8 @@ What it does:
   - 10% Markdown
   - 5% Bash
   - 5% YAML
-- sends the completion request and acceptance telemetry for each run
+- sends the completion request for each run
+- sends acceptance telemetry for about 90% of runs
 
 Current fixture map:
 - `fixtures/sample.ts`
@@ -91,7 +92,8 @@ Notes:
 - `line` and `character` are **zero-based**
 - the file is opened as a TypeScript document
 - the client sends `textDocument/didShowCompletion` for the first result
-- add `--accept-first` to simulate accepting the first suggestion
+- add `--accept-first` to always accept the first suggestion
+- add `--accept-rate <0-100>` to accept the first suggestion at a percentage rate
 
 ## Good test example
 
@@ -124,10 +126,16 @@ If you want to simulate the user accepting the first suggestion too:
 bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-first
 ```
 
+If you want a partial acceptance rate instead:
+
+```bash
+bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-rate 90
+```
+
 That will:
 - request inline completions
 - mark the first one as shown
-- call `workspace/executeCommand` for the first completion item
+- call `workspace/executeCommand` for the first completion item when the acceptance check passes
 
 ## What the CLI sends
 
@@ -138,7 +146,7 @@ The client identifies itself during `initialize` as:
 {
   "editorInfo": {
     "name": "neovim",
-    "version": "0.10.0"
+    "version": "0.12.1"
   }
 }
 ```
