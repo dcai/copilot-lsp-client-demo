@@ -32,6 +32,7 @@ pick_fixture() {
     echo "fixtures/sample.yaml:4:13"
 }
 
+date
 for run in $(seq 1 "$count"); do
     selected="$(pick_fixture)"
     IFS=':' read -r file line character <<<"$selected"
@@ -39,7 +40,6 @@ for run in $(seq 1 "$count"); do
     echo "===== RUN $run / $count ====="
     echo "fixture=$file line=$line character=$character"
 
-    date
     bun run complete --file "$file" --line "$line" --character "$character" --accept-rate 20
     echo
 done
