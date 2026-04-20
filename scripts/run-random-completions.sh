@@ -39,6 +39,7 @@ for run in $(seq 1 "$count"); do
     echo "===== RUN $run / $count ====="
     echo "fixture=$file line=$line character=$character"
 
-    bun run complete --file "$file" --line "$line" --character "$character" --accept-rate 90
+    date
+    bun run complete --file "$file" --line "$line" --character "$character" --accept-rate 20
     echo
 done
