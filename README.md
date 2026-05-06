@@ -53,6 +53,38 @@ Current fixture map:
 - `fixtures/sample.sh`
 - `fixtures/sample.yaml`
 
+### Generate random files with Copilot
+
+```bash
+./scripts/void-run.sh
+```
+
+What it does:
+- picks one output format using weighted selection
+- asks Copilot to generate more lines than needed
+- saves the first `TARGET_LINES` lines into `void/`
+- writes debug output to `void/void-run-debug.log`
+
+Current format weights:
+- 45% TypeScript
+- 10% JavaScript
+- 10% Python
+- 10% Markdown
+- 10% Lua
+- 8% JSON
+- 7% YAML
+
+Environment variables:
+- `TARGET_LINES` controls how many lines are required and saved
+- `PROMPT_MIN_LINES` controls how many lines the prompt asks Copilot to generate
+
+Examples:
+
+```bash
+./scripts/void-run.sh
+TARGET_LINES=150 ./scripts/void-run.sh
+TARGET_LINES=150 PROMPT_MIN_LINES=180 ./scripts/void-run.sh
+```
 
 ### Check status
 
