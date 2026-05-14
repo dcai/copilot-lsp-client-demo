@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="/opt/homebrew/bin:$HOME/.bun/bin:${PATH:-/usr/bin:/bin}"
+export PATH="${PATH:-/usr/bin:/bin}:$HOME/.bun/bin:/opt/homebrew/bin"
 
 count="${1:-50}"
 

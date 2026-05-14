@@ -137,6 +137,32 @@ const shouldAcceptCompletion = (acceptRate: number): boolean => {
   return Math.random() < acceptRate / 100;
 };
 
+const formatTopLevelError = (error: unknown): string => {
+  const baseMessage = error instanceof Error ? error.stack ?? error.message : String(error);
+
+  if (!baseMessage.includes('HTTP 200 response does not appear to originate from GitHub')) {
+    return baseMessage;
+  }
+
+  const proxyEnvNames = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy'];
+  const activeProxyEnv = proxyEnvNames.filter((name) => {
+    return typeof process.env[name] === 'string' && process.env[name]!.length > 0;
+  });
+
+  const proxySummary = activeProxyEnv.length > 0 ? activeProxyEnv.join(', ') : 'none detected';
+
+  return `${baseMessage}
+
+Copilot LSP likely got an intercepted response instead of a real GitHub response.
+
+Quick checks:
+- Proxy env vars: ${proxySummary}
+- Try: bun run auth:status
+- Try: env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY bun run complete --file fixtures/sample.ts --line 8 --character 2
+- If you are on a corporate network, VPN, or TLS-inspecting firewall, try another network or disable interception
+- More info: https://gh.io/copilot-firewall`;
+};
+
 const run = async (): Promise<void> => {
   const { command, options } = parseArgs(process.argv.slice(2));
 
@@ -233,7 +259,6 @@ const run = async (): Promise<void> => {
 };
 
 run().catch((error: unknown) => {
-  const message = error instanceof Error ? error.stack ?? error.message : String(error);
-  console.error(message);
+  console.error(formatTopLevelError(error));
   process.exitCode = 1;
 });
