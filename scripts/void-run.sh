@@ -264,46 +264,19 @@ printf '%s\n' "$PROMPT" | sed -n '1,20p' | tee -a "$DEBUG_LOG"
 log_debug "prompt preview end"
 cd "$WORK_DIR"
 log_debug "copilot_cwd=$(pwd)"
-log_debug "running copilot command"
-
-TIMEOUT_BIN=""
-# if command -v timeout >/dev/null 2>&1; then
-#     TIMEOUT_BIN="timeout"
-# fi
-# if command -v gtimeout >/dev/null 2>&1; then
-#     TIMEOUT_BIN="gtimeout"
-# fi
-# if [ -n "$TIMEOUT_BIN" ]; then
-#     log_debug "using timeout_bin=$TIMEOUT_BIN duration=300s"
-# else
-#     log_debug "no timeout binary found; copilot may hang indefinitely"
-# fi
+log_debug "running copilot command..."
 
 set +e
-if [ -n "$TIMEOUT_BIN" ]; then
-    "$TIMEOUT_BIN" 300 \
-        "$COPILOT_BIN" \
-        -C "$WORK_DIR" \
-        --disable-builtin-mcps \
-        --experimental \
-        --no-custom-instructions \
-        --yolo \
-        --model gpt-5-mini \
-        -p "$PROMPT" \
-        --silent >>"$DEBUG_LOG" 2>&1
-    COPILOT_EXIT_CODE="$?"
-else
-    "$COPILOT_BIN" \
-        -C "$WORK_DIR" \
-        --disable-builtin-mcps \
-        --experimental \
-        --no-custom-instructions \
-        --yolo \
-        --model gpt-5-mini \
-        -p "$PROMPT" \
-        --silent >>"$DEBUG_LOG" 2>&1
-    COPILOT_EXIT_CODE="$?"
-fi
+"$COPILOT_BIN" \
+    -C "$WORK_DIR" \
+    --disable-builtin-mcps \
+    --experimental \
+    --no-custom-instructions \
+    --yolo \
+    --model gpt-5-mini \
+    -p "$PROMPT" \
+    --silent >>"$DEBUG_LOG" 2>&1
+COPILOT_EXIT_CODE="$?"
 set -e
 
 log_debug "copilot_exit_code=$COPILOT_EXIT_CODE"
@@ -334,12 +307,12 @@ echo "$OUTPUT_FILE"
 echo "Work dir:"
 echo "$WORK_DIR"
 echo
-echo "Tree:"
+echo "## > tree"
 # this filters the tree to confirm the new file is in the tree
 tree -P "$(basename "$OUTPUT_FILE")" "$OUTPUT_DIR"
 echo
-echo "Head:"
+echo "## > head"
 head -n 10 "$OUTPUT_FILE"
 echo
-echo "Tail:"
+echo "## > tail"
 tail -n 10 "$OUTPUT_FILE"
