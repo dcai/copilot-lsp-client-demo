@@ -16,6 +16,7 @@ TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
 DEBUG_LOG="$OUTPUT_DIR/void-run-debug.log"
 TARGET_LINES="${TARGET_LINES:-300}"
 PROMPT_MIN_LINES="${PROMPT_MIN_LINES:-$((TARGET_LINES + 20))}"
+WORK_DIR="$(mktemp -d)"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -25,6 +26,14 @@ log_debug() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message" | tee -a "$DEBUG_LOG"
 }
 
+cleanup() {
+    if [ -d "$WORK_DIR" ]; then
+        rm -rf "$WORK_DIR"
+    fi
+}
+
+trap cleanup EXIT
+
 log_debug "starting void-run.sh"
 log_debug "repo_dir=$REPO_DIR"
 log_debug "copilot_bin=$COPILOT_BIN"
@@ -32,6 +41,7 @@ log_debug "output_dir=$OUTPUT_DIR"
 log_debug "timestamp=$TIMESTAMP"
 log_debug "target_lines=$TARGET_LINES"
 log_debug "prompt_min_lines=$PROMPT_MIN_LINES"
+log_debug "work_dir=$WORK_DIR"
 log_debug "pwd=$(pwd)"
 log_debug "user=$(whoami)"
 log_debug "home=${HOME:-}"
@@ -94,8 +104,10 @@ Write TypeScript directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking TypeScript or TypeScript-style comments
@@ -114,8 +126,10 @@ Write JavaScript directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking JavaScript or JavaScript-style comments
@@ -134,8 +148,10 @@ Write Python directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking Python or Python-style comments
@@ -154,8 +170,10 @@ Write Markdown directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - Use headings, bullets, checklists, code-indented examples, quotes, and short notes
@@ -173,8 +191,10 @@ Write Lua directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking Lua or Lua-style comments
@@ -193,8 +213,10 @@ Write JSON directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - The content should look like realistic JSON fragments or a large JSON structure spread across lines
@@ -213,8 +235,10 @@ Write YAML directly to this file: $OUTPUT_FILE
 Requirements:
 - Write at least $PROMPT_MIN_LINES lines
 - Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
-- After writing the file, print one short confirmation line with the path and total line count
+- After writing the file, print only one short confirmation line with the path and total line count
 
 Rules:
 - The content should look like realistic YAML documents or config fragments
@@ -238,6 +262,8 @@ PROMPT="$(build_prompt)"
 log_debug "prompt preview start"
 printf '%s\n' "$PROMPT" | sed -n '1,20p' | tee -a "$DEBUG_LOG"
 log_debug "prompt preview end"
+cd "$WORK_DIR"
+log_debug "copilot_cwd=$(pwd)"
 log_debug "running copilot command"
 
 TIMEOUT_BIN=""
@@ -262,7 +288,7 @@ if [ -n "$TIMEOUT_BIN" ]; then
         --yolo \
         --model gpt-5-mini \
         -p "$PROMPT" \
-        --silent 2>>"$DEBUG_LOG"
+        --silent >>"$DEBUG_LOG" 2>&1
     COPILOT_EXIT_CODE="$?"
 else
     "$COPILOT_BIN" \
@@ -271,7 +297,7 @@ else
         --yolo \
         --model gpt-5-mini \
         -p "$PROMPT" \
-        --silent
+        --silent >>"$DEBUG_LOG" 2>&1
     COPILOT_EXIT_CODE="$?"
 fi
 set -e
@@ -299,4 +325,17 @@ if [ "$ACTUAL_LINES" -lt "$TARGET_LINES" ]; then
 fi
 
 log_debug "void-run.sh completed successfully"
-echo "Wrote $ACTUAL_LINES lines to $OUTPUT_FILE"
+echo "Wrote $ACTUAL_LINES lines to:"
+echo "$OUTPUT_FILE"
+echo "Work dir:"
+echo "$WORK_DIR"
+echo
+echo "Tree:"
+# this filters the tree to confirm the new file is in the tree
+tree -P "$(basename "$OUTPUT_FILE")" "$OUTPUT_DIR"
+echo
+echo "Head:"
+head -n 10 "$OUTPUT_FILE"
+echo
+echo "Tail:"
+tail -n 10 "$OUTPUT_FILE"
