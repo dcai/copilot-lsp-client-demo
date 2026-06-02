@@ -283,8 +283,10 @@ set +e
 if [ -n "$TIMEOUT_BIN" ]; then
     "$TIMEOUT_BIN" 300 \
         "$COPILOT_BIN" \
+        -C "$WORK_DIR" \
         --disable-builtin-mcps \
         --experimental \
+        --no-custom-instructions \
         --yolo \
         --model gpt-5-mini \
         -p "$PROMPT" \
@@ -292,8 +294,10 @@ if [ -n "$TIMEOUT_BIN" ]; then
     COPILOT_EXIT_CODE="$?"
 else
     "$COPILOT_BIN" \
+        -C "$WORK_DIR" \
         --disable-builtin-mcps \
         --experimental \
+        --no-custom-instructions \
         --yolo \
         --model gpt-5-mini \
         -p "$PROMPT" \
