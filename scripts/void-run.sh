@@ -13,7 +13,6 @@ REPO_DIR="$HOME/iag/copilot-lsp-stats"
 COPILOT_BIN="$HOME/.local/bin/copilot"
 OUTPUT_DIR="$REPO_DIR/void"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
-TMP_FILE="$(mktemp)"
 DEBUG_LOG="$OUTPUT_DIR/void-run-debug.log"
 TARGET_LINES="${TARGET_LINES:-300}"
 PROMPT_MIN_LINES="${PROMPT_MIN_LINES:-$((TARGET_LINES + 20))}"
@@ -26,20 +25,11 @@ log_debug() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message" | tee -a "$DEBUG_LOG"
 }
 
-cleanup() {
-    if [ -f "$TMP_FILE" ]; then
-        rm -f "$TMP_FILE"
-    fi
-}
-
-trap cleanup EXIT
-
 log_debug "starting void-run.sh"
 log_debug "repo_dir=$REPO_DIR"
 log_debug "copilot_bin=$COPILOT_BIN"
 log_debug "output_dir=$OUTPUT_DIR"
 log_debug "timestamp=$TIMESTAMP"
-log_debug "tmp_file=$TMP_FILE"
 log_debug "target_lines=$TARGET_LINES"
 log_debug "prompt_min_lines=$PROMPT_MIN_LINES"
 log_debug "pwd=$(pwd)"
@@ -99,7 +89,13 @@ build_prompt() {
     case "$FORMAT" in
         typescript)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of TypeScript.
+Write TypeScript directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking TypeScript or TypeScript-style comments
@@ -113,7 +109,13 @@ EOF
             ;;
         javascript)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of JavaScript.
+Write JavaScript directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking JavaScript or JavaScript-style comments
@@ -127,7 +129,13 @@ EOF
             ;;
         python)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of Python.
+Write Python directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking Python or Python-style comments
@@ -141,7 +149,13 @@ EOF
             ;;
         markdown)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of Markdown.
+Write Markdown directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - Use headings, bullets, checklists, code-indented examples, quotes, and short notes
@@ -154,7 +168,13 @@ EOF
             ;;
         lua)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of Lua.
+Write Lua directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - Every line must be valid-looking Lua or Lua-style comments
@@ -168,7 +188,13 @@ EOF
             ;;
         json)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of JSON.
+Write JSON directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - The content should look like realistic JSON fragments or a large JSON structure spread across lines
@@ -182,7 +208,13 @@ EOF
             ;;
         yaml)
             cat <<EOF
-Generate at least $PROMPT_MIN_LINES lines of YAML.
+Write YAML directly to this file: $OUTPUT_FILE
+
+Requirements:
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Do not print the file contents to stdout
+- After writing the file, print one short confirmation line with the path and total line count
 
 Rules:
 - The content should look like realistic YAML documents or config fragments
@@ -209,18 +241,17 @@ log_debug "prompt preview end"
 log_debug "running copilot command"
 
 TIMEOUT_BIN=""
-if command -v timeout >/dev/null 2>&1; then
-    TIMEOUT_BIN="timeout"
-fi
-if command -v gtimeout >/dev/null 2>&1; then
-    TIMEOUT_BIN="gtimeout"
-fi
-
-if [ -n "$TIMEOUT_BIN" ]; then
-    log_debug "using timeout_bin=$TIMEOUT_BIN duration=300s"
-else
-    log_debug "no timeout binary found; copilot may hang indefinitely"
-fi
+# if command -v timeout >/dev/null 2>&1; then
+#     TIMEOUT_BIN="timeout"
+# fi
+# if command -v gtimeout >/dev/null 2>&1; then
+#     TIMEOUT_BIN="gtimeout"
+# fi
+# if [ -n "$TIMEOUT_BIN" ]; then
+#     log_debug "using timeout_bin=$TIMEOUT_BIN duration=300s"
+# else
+#     log_debug "no timeout binary found; copilot may hang indefinitely"
+# fi
 
 set +e
 if [ -n "$TIMEOUT_BIN" ]; then
@@ -229,55 +260,43 @@ if [ -n "$TIMEOUT_BIN" ]; then
         --disable-builtin-mcps \
         --experimental \
         --yolo \
-        --model gpt-4.1 \
+        --model gpt-5-mini \
         -p "$PROMPT" \
-        --silent >"$TMP_FILE" 2>>"$DEBUG_LOG"
+        --silent 2>>"$DEBUG_LOG"
     COPILOT_EXIT_CODE="$?"
 else
     "$COPILOT_BIN" \
         --disable-builtin-mcps \
         --experimental \
         --yolo \
-        --model gpt-4.1 \
+        --model gpt-5-mini \
         -p "$PROMPT" \
-        --silent >"$TMP_FILE" 2>>"$DEBUG_LOG"
+        --silent
     COPILOT_EXIT_CODE="$?"
 fi
 set -e
 
-log_debug "copilot exit code=$COPILOT_EXIT_CODE"
+log_debug "copilot_exit_code=$COPILOT_EXIT_CODE"
 
 if [ "$COPILOT_EXIT_CODE" -ne 0 ]; then
-    log_debug "copilot command failed; tmp_file_size=$(wc -c <"$TMP_FILE" | tr -d ' ')"
-    if [ -s "$TMP_FILE" ]; then
-        log_debug "partial output preview start"
-        sed -n '1,12p' "$TMP_FILE" | tee -a "$DEBUG_LOG"
-        log_debug "partial output preview end"
-    fi
+    log_debug "copilot command failed"
     exit "$COPILOT_EXIT_CODE"
 fi
 
-log_debug "copilot command finished"
-LINE_COUNT="$(wc -l <"$TMP_FILE" | tr -d ' ')"
-log_debug "source line count=$LINE_COUNT"
-log_debug "generated output preview start"
-sed -n '1,12p' "$TMP_FILE" | tee -a "$DEBUG_LOG"
-log_debug "generated output preview end"
-
-if [ "$LINE_COUNT" -lt "$TARGET_LINES" ]; then
-    log_debug "generation too short; copying raw output to $OUTPUT_FILE and exiting with failure"
-    {
-        echo "[$(date)] ERROR: format=$FORMAT file=$OUTPUT_FILE expected at least $TARGET_LINES lines, got $LINE_COUNT"
-    } >>"$OUTPUT_DIR/cron.log"
-
-    cp "$TMP_FILE" "$OUTPUT_FILE"
+if [ ! -f "$OUTPUT_FILE" ]; then
+    log_debug "copilot completed without creating output file"
+    echo "Expected Copilot to write $OUTPUT_FILE, but the file was not created." >&2
     exit 1
 fi
 
-log_debug "saving first $TARGET_LINES lines to output file"
-head -n "$TARGET_LINES" "$TMP_FILE" >"$OUTPUT_FILE"
+ACTUAL_LINES="$(awk 'END { print NR }' "$OUTPUT_FILE")"
+log_debug "actual_lines=$ACTUAL_LINES"
 
-log_debug "saved_file_line_count=$(wc -l <"$OUTPUT_FILE" | tr -d ' ')"
-log_debug "done"
+if [ "$ACTUAL_LINES" -lt "$TARGET_LINES" ]; then
+    log_debug "output file has fewer lines than requested"
+    echo "Expected at least $TARGET_LINES lines in $OUTPUT_FILE, got $ACTUAL_LINES." >&2
+    exit 1
+fi
 
-echo "[$(date)] wrote $OUTPUT_FILE format=$FORMAT source_lines=$LINE_COUNT saved_lines=$TARGET_LINES" >>"$OUTPUT_DIR/cron.log"
+log_debug "void-run.sh completed successfully"
+echo "Wrote $ACTUAL_LINES lines to $OUTPUT_FILE"

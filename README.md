@@ -62,7 +62,8 @@ Current fixture map:
 What it does:
 - picks one output format using weighted selection
 - asks Copilot to generate more lines than needed
-- saves the first `TARGET_LINES` lines into `void/`
+- asks Copilot to write the generated content directly into `void/`
+- checks that the written file has at least `TARGET_LINES` lines
 - writes debug output to `void/void-run-debug.log`
 
 Current format weights:
