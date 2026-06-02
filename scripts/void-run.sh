@@ -53,17 +53,17 @@ pick_format() {
     local roll
     roll=$(((RANDOM % 100) + 1))
 
-    if [ "$roll" -le 45 ]; then
+    if [ "$roll" -le 50 ]; then
         echo "typescript:ts"
         return
     fi
 
-    if [ "$roll" -le 55 ]; then
+    if [ "$roll" -le 65 ]; then
         echo "javascript:js"
         return
     fi
 
-    if [ "$roll" -le 65 ]; then
+    if [ "$roll" -le 70 ]; then
         echo "python:py"
         return
     fi
@@ -78,7 +78,7 @@ pick_format() {
         return
     fi
 
-    if [ "$roll" -le 93 ]; then
+    if [ "$roll" -le 90 ]; then
         echo "json:json"
         return
     fi
