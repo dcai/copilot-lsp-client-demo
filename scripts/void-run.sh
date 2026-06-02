@@ -14,7 +14,7 @@ COPILOT_BIN="$HOME/.local/bin/copilot"
 OUTPUT_DIR="$REPO_DIR/void"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
 DEBUG_LOG="$OUTPUT_DIR/void-run-debug.log"
-TARGET_LINES="${TARGET_LINES:-300}"
+TARGET_LINES="${TARGET_LINES:-500}"
 PROMPT_MIN_LINES="${PROMPT_MIN_LINES:-$((TARGET_LINES + 20))}"
 WORK_DIR="$(mktemp -d)"
 
