@@ -41,6 +41,6 @@ for run in $(seq 1 "$count"); do
     echo "fixture=$file line=$line character=$character"
     sleep 3
 
-    bun run complete --file "$file" --line "$line" --character "$character" --accept-rate 80
+    bun run complete --file "$file" --line "$line" --character "$character" --accept-rate 65
     echo
 done
