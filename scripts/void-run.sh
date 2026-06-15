@@ -102,6 +102,7 @@ COMMON_REQUIREMENTS="$(
 - Work from scratch in the current empty directory
 - Do not inspect or rely on any existing repository files
 - Do not print the file contents to stdout
+- After creating the first draft, review the saved file and remove every non-content line, including blank lines, comment lines, separators, and explanatory text
 - After writing the file, print only one short confirmation line with the path and total line count
 EOF
 )"
@@ -109,6 +110,7 @@ EOF
 COMMON_RULES="$(
     cat <<EOF
 - Safe content only
+- The final saved file must not contain blank lines or comments
 - No explanation
 - Use this randomness seed: $SEED
 EOF
@@ -123,7 +125,7 @@ build_prompt() {
             file_label="TypeScript"
             format_rules="$(
                 cat <<EOF
-- Every line must be valid-looking TypeScript or TypeScript-style comments
+- Every remaining line must be valid-looking TypeScript code
 - Prefer functions, types, interfaces, constants, imports, utility helpers, and realistic snippets
 - No markdown fences
 - No intro or outro
@@ -134,7 +136,7 @@ EOF
             file_label="JavaScript"
             format_rules="$(
                 cat <<EOF
-- Every line must be valid-looking JavaScript or JavaScript-style comments
+- Every remaining line must be valid-looking JavaScript code
 - Prefer functions, objects, arrays, utilities, logs, and realistic snippets
 - No intro or outro
 EOF
@@ -144,7 +146,7 @@ EOF
             file_label="Python"
             format_rules="$(
                 cat <<EOF
-- Every line must be valid-looking Python or Python-style comments
+- Every remaining line must be valid-looking Python code
 - Prefer functions, dictionaries, lists, utility helpers, small classes, error handling, and realistic snippets
 - No intro or outro
 EOF
@@ -154,6 +156,7 @@ EOF
             file_label="Markdown"
             format_rules="$(
                 cat <<EOF
+- Every remaining line must be meaningful Markdown content
 - Use headings, bullets, checklists, code-indented examples, quotes, and short notes
 - No fenced code blocks
 - No intro or outro outside the markdown itself
@@ -164,7 +167,7 @@ EOF
             file_label="Lua"
             format_rules="$(
                 cat <<EOF
-- Every line must be valid-looking Lua or Lua-style comments
+- Every remaining line must be valid-looking Lua code
 - Prefer local functions, tables, modules, utility helpers, conditionals, loops, and realistic snippets
 - No intro or outro
 EOF
@@ -174,6 +177,7 @@ EOF
             file_label="JSON"
             format_rules="$(
                 cat <<EOF
+- Every remaining line must belong to realistic JSON content
 - The content should look like realistic JSON fragments or a large JSON structure spread across lines
 - Use objects, arrays, nested fields, strings, booleans, and numbers
 - No intro or outro
@@ -184,8 +188,9 @@ EOF
             file_label="YAML"
             format_rules="$(
                 cat <<EOF
+- Every remaining line must belong to realistic YAML content
 - The content should look like realistic YAML documents or config fragments
-- Use nested keys, lists, strings, booleans, numbers, and comments
+- Use nested keys, lists, strings, booleans, and numbers
 - No intro or outro
 EOF
             )"
