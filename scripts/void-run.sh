@@ -95,166 +95,117 @@ SEED="$(date +%s)"
 log_debug "selected format=$FORMAT ext=$EXT seed=$SEED"
 log_debug "output_file=$OUTPUT_FILE"
 
+COMMON_REQUIREMENTS="$(
+    cat <<EOF
+- Write at least $PROMPT_MIN_LINES lines
+- Create or overwrite only that file
+- Work from scratch in the current empty directory
+- Do not inspect or rely on any existing repository files
+- Do not print the file contents to stdout
+- After writing the file, print only one short confirmation line with the path and total line count
+EOF
+)"
+
+COMMON_RULES="$(
+    cat <<EOF
+- Safe content only
+- No explanation
+- Use this randomness seed: $SEED
+EOF
+)"
+
 build_prompt() {
+    local file_label
+    local format_rules
+
     case "$FORMAT" in
         typescript)
-            cat <<EOF
-Write TypeScript directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="TypeScript"
+            format_rules="$(
+                cat <<EOF
 - Every line must be valid-looking TypeScript or TypeScript-style comments
 - Prefer functions, types, interfaces, constants, imports, utility helpers, and realistic snippets
-- Safe content only
 - No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         javascript)
-            cat <<EOF
-Write JavaScript directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="JavaScript"
+            format_rules="$(
+                cat <<EOF
 - Every line must be valid-looking JavaScript or JavaScript-style comments
 - Prefer functions, objects, arrays, utilities, logs, and realistic snippets
-- Safe content only
-- No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         python)
-            cat <<EOF
-Write Python directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="Python"
+            format_rules="$(
+                cat <<EOF
 - Every line must be valid-looking Python or Python-style comments
 - Prefer functions, dictionaries, lists, utility helpers, small classes, error handling, and realistic snippets
-- Safe content only
-- No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         markdown)
-            cat <<EOF
-Write Markdown directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="Markdown"
+            format_rules="$(
+                cat <<EOF
 - Use headings, bullets, checklists, code-indented examples, quotes, and short notes
-- Safe content only
 - No fenced code blocks
 - No intro or outro outside the markdown itself
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         lua)
-            cat <<EOF
-Write Lua directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="Lua"
+            format_rules="$(
+                cat <<EOF
 - Every line must be valid-looking Lua or Lua-style comments
 - Prefer local functions, tables, modules, utility helpers, conditionals, loops, and realistic snippets
-- Safe content only
-- No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         json)
-            cat <<EOF
-Write JSON directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="JSON"
+            format_rules="$(
+                cat <<EOF
 - The content should look like realistic JSON fragments or a large JSON structure spread across lines
 - Use objects, arrays, nested fields, strings, booleans, and numbers
-- Safe content only
-- No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         yaml)
-            cat <<EOF
-Write YAML directly to this file: $OUTPUT_FILE
-
-Requirements:
-- Write at least $PROMPT_MIN_LINES lines
-- Create or overwrite only that file
-- Work from scratch in the current empty directory
-- Do not inspect or rely on any existing repository files
-- Do not print the file contents to stdout
-- After writing the file, print only one short confirmation line with the path and total line count
-
-Rules:
+            file_label="YAML"
+            format_rules="$(
+                cat <<EOF
 - The content should look like realistic YAML documents or config fragments
 - Use nested keys, lists, strings, booleans, numbers, and comments
-- Safe content only
-- No markdown fences
 - No intro or outro
-- No explanation
-- Use this randomness seed: $SEED
 EOF
+            )"
             ;;
         *)
             echo "Unknown format: $FORMAT" >&2
             exit 1
             ;;
     esac
+
+    cat <<EOF
+Write $file_label directly to this file: $OUTPUT_FILE
+
+Requirements:
+$COMMON_REQUIREMENTS
+
+Rules:
+$format_rules
+$COMMON_RULES
+EOF
 }
 
 PROMPT="$(build_prompt)"
