@@ -229,7 +229,7 @@ set +e
     --experimental \
     --no-custom-instructions \
     --yolo \
-    --model gpt-5-mini \
+    --model gpt-5.6-luna \
     -p "$PROMPT" \
     --silent >>"$DEBUG_LOG" 2>&1
 COPILOT_EXIT_CODE="$?"
