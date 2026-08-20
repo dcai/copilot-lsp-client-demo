@@ -63,7 +63,9 @@ What it does:
 - picks one output format using weighted selection
 - asks Copilot to generate more lines than needed
 - runs Copilot from an isolated temporary working directory
-- disables repo and user custom instruction files with `--no-custom-instructions`
+- gives Copilot a fresh temporary `COPILOT_HOME`, which is deleted after the run along with its session state, logs, MCP configuration, and installed plugins
+- does not load user-installed plugins or custom instruction files
+- disables built-in MCP servers, all hooks, and remote session features
 - asks Copilot to write the generated content directly into `void/`
 - checks that the written file has at least `TARGET_LINES` lines
 - prints the temp work dir, `tree`, `head`, and `tail` for a quick visual check

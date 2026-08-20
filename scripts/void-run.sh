@@ -17,8 +17,12 @@ DEBUG_LOG="$OUTPUT_DIR/void-run-debug.log"
 TARGET_LINES="${TARGET_LINES:-500}"
 PROMPT_MIN_LINES="${PROMPT_MIN_LINES:-$((TARGET_LINES + 20))}"
 WORK_DIR="$(mktemp -d)"
+# Keep Copilot's session state, installed plugins, MCP configuration, and logs
+# isolated to this run. cleanup removes the entire directory when the run ends.
+COPILOT_HOME="$WORK_DIR/copilot-home"
+export COPILOT_HOME
 
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR" "$COPILOT_HOME"
 
 log_debug() {
     local message
@@ -42,6 +46,7 @@ log_debug "timestamp=$TIMESTAMP"
 log_debug "target_lines=$TARGET_LINES"
 log_debug "prompt_min_lines=$PROMPT_MIN_LINES"
 log_debug "work_dir=$WORK_DIR"
+log_debug "copilot_home=$COPILOT_HOME (disposable)"
 log_debug "pwd=$(pwd)"
 log_debug "user=$(whoami)"
 log_debug "home=${HOME:-}"
@@ -226,8 +231,10 @@ set +e
 "$COPILOT_BIN" \
     -C "$WORK_DIR" \
     --disable-builtin-mcps \
-    --experimental \
+    --disable-all-hooks \
     --no-custom-instructions \
+    --no-remote \
+    --no-remote-export \
     --yolo \
     --model gpt-5.6-luna \
     -p "$PROMPT" \
