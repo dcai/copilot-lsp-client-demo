@@ -11,6 +11,7 @@ It does three useful things:
 - Bun
 - Node.js `>= 20.8`
 - A GitHub account with Copilot access
+- GitHub CLI authenticated with `gh auth login`, or a `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` environment variable for `void-run.sh`
 
 ## Install
 
@@ -65,7 +66,8 @@ What it does:
 - runs Copilot from an isolated temporary working directory
 - gives Copilot a fresh temporary `COPILOT_HOME`, which is deleted after the run along with its session state, logs, MCP configuration, and installed plugins
 - does not load user-installed plugins or custom instruction files
-- disables built-in MCP servers, all hooks, and remote session features
+- disables built-in MCP servers and remote session features
+- gets authentication from an existing token environment variable or the authenticated GitHub CLI; the token is not written to the temporary Copilot home or debug log
 - asks Copilot to write the generated content directly into `void/`
 - checks that the written file has at least `TARGET_LINES` lines
 - prints the temp work dir, `tree`, `head`, and `tail` for a quick visual check

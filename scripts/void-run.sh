@@ -54,6 +54,30 @@ log_debug "shell=${SHELL:-}"
 log_debug "path=${PATH:-}"
 log_debug "tty=$(tty 2>/dev/null || echo 'no-tty')"
 
+configure_auth() {
+    if [ -n "${COPILOT_GITHUB_TOKEN:-}" ] || [ -n "${GH_TOKEN:-}" ] || [ -n "${GITHUB_TOKEN:-}" ]; then
+        log_debug "using authentication token supplied by the environment"
+        return
+    fi
+
+    if ! command -v gh >/dev/null 2>&1; then
+        log_debug "GitHub CLI is unavailable and no Copilot authentication token was supplied"
+        echo "Copilot needs COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN. Alternatively, authenticate the GitHub CLI with: gh auth login" >&2
+        exit 1
+    fi
+
+    COPILOT_GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
+
+    if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+        log_debug "GitHub CLI has no usable authentication token"
+        echo "Copilot needs a token. Run: gh auth login" >&2
+        exit 1
+    fi
+
+    export COPILOT_GITHUB_TOKEN
+    log_debug "using authentication token from GitHub CLI"
+}
+
 pick_format() {
     local roll
     roll=$(((RANDOM % 100) + 1))
@@ -219,6 +243,7 @@ EOF
 }
 
 PROMPT="$(build_prompt)"
+configure_auth
 
 log_debug "prompt preview start"
 printf '%s\n' "$PROMPT" | sed -n '1,20p' | tee -a "$DEBUG_LOG"
@@ -231,7 +256,6 @@ set +e
 "$COPILOT_BIN" \
     -C "$WORK_DIR" \
     --disable-builtin-mcps \
-    --disable-all-hooks \
     --no-custom-instructions \
     --no-remote \
     --no-remote-export \
