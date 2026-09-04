@@ -43,6 +43,11 @@ export type OpenDocument = {
 
 type AcceptanceMode = 'full' | 'partial';
 
+export type TypingResult = {
+  document: OpenDocument;
+  position: LspPosition;
+};
+
 export type StatusNotification = {
   busy: boolean;
   message: string;
@@ -142,6 +147,33 @@ const offsetAt = (text: string, position: LspPosition): number => {
   }
 
   return Math.min(offset + position.character, text.length);
+};
+
+const insertTextAt = (text: string, position: LspPosition, insertedText: string): string => {
+  const offset = offsetAt(text, position);
+  return text.slice(0, offset) + insertedText + text.slice(offset);
+};
+
+const advancePosition = (position: LspPosition, insertedText: string): LspPosition => {
+  const lines = insertedText.split('\n');
+
+  if (lines.length === 1) {
+    return {
+      line: position.line,
+      character: position.character + utf16Length(insertedText),
+    };
+  }
+
+  return {
+    line: position.line + lines.length - 1,
+    character: utf16Length(lines[lines.length - 1]),
+  };
+};
+
+const wait = async (delayMs: number): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 };
 
 export class CopilotLspClient {
@@ -293,6 +325,39 @@ export class CopilotLspClient {
     return response as InlineCompletionResponse;
   }
 
+  public async simulateTyping(
+    document: OpenDocument,
+    position: LspPosition,
+    text: string,
+    delayMs = 0,
+  ): Promise<TypingResult> {
+    let currentPosition = { ...position };
+
+    for (const character of [...text]) {
+      const nextText = insertTextAt(document.text, currentPosition, character);
+      const version = document.version + 1;
+
+      this.notify('textDocument/didChange', {
+        textDocument: { uri: document.uri, version },
+        contentChanges: [{
+          range: { start: currentPosition, end: currentPosition },
+          rangeLength: 0,
+          text: character,
+        }],
+      });
+
+      document.text = nextText;
+      document.version = version;
+      currentPosition = advancePosition(currentPosition, character);
+
+      if (delayMs > 0) {
+        await wait(delayMs);
+      }
+    }
+
+    return { document, position: currentPosition };
+  }
+
   public notifyCompletionShown(item: InlineCompletionItem): void {
     this.notify('textDocument/didShowCompletion', { item });
   }
@@ -397,7 +462,11 @@ export class CopilotLspClient {
 
     this.notify('textDocument/didChange', {
       textDocument: { uri, version },
-      contentChanges: [{ text: nextText }],
+      contentChanges: [{
+        range: item.range,
+        rangeLength: utf16Length(document.text.slice(start, end)),
+        text: insertedText,
+      }],
     });
 
     document.text = nextText;

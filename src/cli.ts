@@ -7,6 +7,8 @@ type CliOptions = {
   line?: number;
   character?: number;
   workspace?: string;
+  typeText?: string;
+  typeDelayMs: number;
   editorVersion: string;
   acceptRate: number;
   acceptMode: 'full' | 'partial';
@@ -18,6 +20,7 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
     editorVersion: '0.12.1',
     acceptRate: 0,
     acceptMode: 'full',
+    typeDelayMs: 0,
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -44,6 +47,18 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
 
     if (current === '--workspace' && next) {
       options.workspace = next;
+      index += 1;
+      continue;
+    }
+
+    if (current === '--type-text' && next !== undefined) {
+      options.typeText = next;
+      index += 1;
+      continue;
+    }
+
+    if (current === '--type-delay-ms' && next) {
+      options.typeDelayMs = Number(next);
       index += 1;
       continue;
     }
@@ -84,6 +99,8 @@ const printHelp = (): void => {
 
 Options:
   --workspace <path>       Workspace root. Defaults to current directory.
+  --type-text <text>       Simulate typing text at the requested position.
+  --type-delay-ms <ms>     Delay between simulated characters. Defaults to 0.
   --editor-version <ver>   Editor version reported to Copilot. Defaults to 0.12.1.
   --accept-first           Always accept the first completion after showing it.
   --accept-rate <0-100>    Accept the first completion at the given percentage rate.
@@ -116,6 +133,14 @@ const requireNumberOption = (value: number | undefined, flagName: string): numbe
 const requireAcceptRateOption = (value: number): number => {
   if (!Number.isFinite(value) || value < 0 || value > 100) {
     throw new Error('Invalid --accept-rate. Expected a number between 0 and 100.');
+  }
+
+  return value;
+};
+
+const requireDelayOption = (value: number): number => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error('Invalid --type-delay-ms. Expected a non-negative number.');
   }
 
   return value;
@@ -229,11 +254,25 @@ const run = async (): Promise<void> => {
       const line = requireNumberOption(options.line, '--line');
       const character = requireNumberOption(options.character, '--character');
       const acceptRate = requireAcceptRateOption(options.acceptRate);
+      const typeDelayMs = requireDelayOption(options.typeDelayMs);
       const document = await client.openDocument(filePath);
+      let completionPosition = { line, character };
+
+      if (options.typeText !== undefined) {
+        const typingResult = await client.simulateTyping(
+          document,
+          completionPosition,
+          options.typeText,
+          typeDelayMs,
+        );
+        completionPosition = typingResult.position;
+        console.log(`Simulated typing ${options.typeText.length} characters.`);
+      }
+
       const result = await client.requestInlineCompletion({
         uri: document.uri,
         version: document.version,
-        position: { line, character },
+        position: completionPosition,
       });
 
       console.log('Completion response:');

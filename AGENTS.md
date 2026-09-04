@@ -9,6 +9,7 @@
 - Sign out: `bun run auth:signout`
 - Request one completion: `bun run complete --file fixtures/sample.ts --line 8 --character 2`
 - Request one completion and simulate acceptance: `bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-first`
+- Simulate typing before a completion: `bun run complete --file fixtures/sample.ts --line 8 --character 2 --type-text "const message = " --type-delay-ms 45 --accept-rate 65`
 - Run repeated weighted completion checks: `./scripts/run-random-completions.sh`
 
 ## Important project rules from existing docs
@@ -63,6 +64,7 @@ This repo is a thin CLI harness around `@github/copilot-language-server`.
 - The project does not edit files on disk; it only opens documents in-memory via LSP and requests suggestions.
 - Accepted completions update only the in-memory document; the fixture on disk is never changed.
 - `--accept-rate` controls whether the shown completion is accepted; `--accept-mode partial` selects partial-acceptance telemetry without forcing every run to accept.
+- `--type-text` emits one incremental `textDocument/didChange` per character and advances the completion cursor; `--type-delay-ms` controls the delay between those changes.
 - Language support is extension-based in `detectLanguageId()`. If a new fixture type is added, update that mapping and the shell script together.
 - Raw JSON-RPC logging is intentional and useful for debugging protocol regressions. Avoid removing it unless the task is specifically about changing logging behavior.
 - `printHelp()` in `src/cli.ts` still mentions `node dist/cli.js`; if updating CLI UX or docs, keep runtime examples aligned with the Bun-first workflow.

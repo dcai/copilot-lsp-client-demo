@@ -135,6 +135,8 @@ Notes:
 - add `--accept-first` to always accept the first suggestion
 - add `--accept-rate <0-100>` to accept the first suggestion at a percentage rate
 - add `--accept-mode partial` to simulate partial acceptance; the default mode is `full`
+- add `--type-text <text>` to simulate typing at the requested position
+- add `--type-delay-ms <ms>` to delay between simulated characters
 
 ## Good test example
 
@@ -180,6 +182,20 @@ That will:
 - call `workspace/executeCommand` for full acceptance when the item provides a command
 - send `textDocument/didPartiallyAcceptCompletion` for partial acceptance or items without a command
 - update the in-memory document and send `textDocument/didChange` after acceptance
+
+To simulate typing before requesting a completion:
+
+```bash
+bun run complete \
+  --file fixtures/sample.ts \
+  --line 8 \
+  --character 2 \
+  --type-text "const message = " \
+  --type-delay-ms 45 \
+  --accept-rate 65
+```
+
+Each simulated character sends an incremental `textDocument/didChange` notification. The completion request uses the updated document version and cursor position.
 
 ## What the CLI sends
 
