@@ -34,6 +34,15 @@ export type InlineCompletionResponse = {
   items: InlineCompletionItem[];
 };
 
+export type OpenDocument = {
+  uri: string;
+  filePath: string;
+  text: string;
+  version: number;
+};
+
+type AcceptanceMode = 'full' | 'partial';
+
 export type StatusNotification = {
   busy: boolean;
   message: string;
@@ -103,6 +112,38 @@ const detectLanguageId = (filePath: string): string => {
   return 'plaintext';
 };
 
+const utf16Length = (value: string): number => {
+  return [...value].reduce((length, character) => {
+    return length + (character.codePointAt(0)! > 0xffff ? 2 : 1);
+  }, 0);
+};
+
+const getPartialText = (value: string): string => {
+  if (value.length <= 1) {
+    return value;
+  }
+
+  return value.slice(0, Math.ceil(value.length / 2));
+};
+
+const offsetAt = (text: string, position: LspPosition): number => {
+  let line = 0;
+  let offset = 0;
+
+  while (line < position.line && offset < text.length) {
+    const newline = text.indexOf('\n', offset);
+
+    if (newline === -1) {
+      return text.length;
+    }
+
+    offset = newline + 1;
+    line += 1;
+  }
+
+  return Math.min(offset + position.character, text.length);
+};
+
 export class CopilotLspClient {
   private process: ChildProcessWithoutNullStreams;
 
@@ -113,6 +154,8 @@ export class CopilotLspClient {
   private readonly pendingRequests = new Map<JsonRpcId, PendingRequest>();
 
   private readonly notificationListeners = new Map<string, Array<(params: unknown) => void>>();
+
+  private readonly documents = new Map<string, OpenDocument>();
 
   private lastStatus: StatusNotification | null = null;
 
@@ -181,12 +224,12 @@ export class CopilotLspClient {
       },
       initializationOptions: {
         editorInfo: {
-          name: 'neovim',
+          name: 'Neovim',
           version: editorVersion,
         },
         editorPluginInfo: {
-          name: 'copilot-lsp-client-neovim',
-          version: '0.1.0',
+          name: 'copilot.vim',
+          version: '1.59.0',
         },
       },
     });
@@ -201,7 +244,7 @@ export class CopilotLspClient {
     });
   }
 
-  public async openDocument(filePath: string): Promise<{ uri: string; text: string; version: number }> {
+  public async openDocument(filePath: string): Promise<OpenDocument> {
     const text = readFileSync(filePath, 'utf8');
     const uri = pathToFileURL(filePath).href;
     const version = 1;
@@ -221,7 +264,9 @@ export class CopilotLspClient {
       },
     });
 
-    return { uri, text, version };
+    this.documents.set(uri, { uri, filePath, text, version });
+
+    return { uri, filePath, text, version };
   }
 
   public async requestInlineCompletion(input: {
@@ -252,15 +297,41 @@ export class CopilotLspClient {
     this.notify('textDocument/didShowCompletion', { item });
   }
 
-  public async acceptCompletion(item: InlineCompletionItem): Promise<void> {
-    if (!item.command) {
+  public notifyCompletionPartiallyAccepted(item: InlineCompletionItem, acceptedLength: number): void {
+    this.notify('textDocument/didPartiallyAcceptCompletion', {
+      item,
+      acceptedLength,
+    });
+  }
+
+  public async acceptCompletion(
+    document: OpenDocument,
+    item: InlineCompletionItem,
+    mode: AcceptanceMode = 'full',
+  ): Promise<void> {
+    const acceptedText = mode === 'partial' ? getPartialText(item.insertText) : item.insertText;
+
+    if (mode === 'full' && item.command) {
+      await this.request('workspace/executeCommand', {
+        command: item.command.command,
+        arguments: item.command.arguments ?? [],
+      });
+    } else {
+      this.notifyCompletionPartiallyAccepted(item, utf16Length(acceptedText));
+    }
+
+    this.applyCompletion(document.uri, item, acceptedText);
+  }
+
+  public async closeDocument(uri: string): Promise<void> {
+    if (!this.documents.has(uri)) {
       return;
     }
 
-    await this.request('workspace/executeCommand', {
-      command: item.command.command,
-      arguments: item.command.arguments ?? [],
+    this.notify('textDocument/didClose', {
+      textDocument: { uri },
     });
+    this.documents.delete(uri);
   }
 
   public async signIn(): Promise<unknown> {
@@ -298,12 +369,39 @@ export class CopilotLspClient {
   }
 
   public async close(): Promise<void> {
-    for (const [id, pendingRequest] of this.pendingRequests) {
-      pendingRequest.reject(new Error(`Client closed before request ${id} resolved`));
+    for (const uri of this.documents.keys()) {
+      await this.closeDocument(uri);
     }
 
-    this.pendingRequests.clear();
-    this.process.kill();
+    if (!this.process.killed) {
+      try {
+        await this.request('shutdown', {});
+      } finally {
+        this.notify('exit', null);
+        this.process.kill();
+      }
+    }
+  }
+
+  private applyCompletion(uri: string, item: InlineCompletionItem, insertedText: string): void {
+    const document = this.documents.get(uri);
+
+    if (!document) {
+      return;
+    }
+
+    const start = offsetAt(document.text, item.range.start);
+    const end = offsetAt(document.text, item.range.end);
+    const nextText = document.text.slice(0, start) + insertedText + document.text.slice(end);
+    const version = document.version + 1;
+
+    this.notify('textDocument/didChange', {
+      textDocument: { uri, version },
+      contentChanges: [{ text: nextText }],
+    });
+
+    document.text = nextText;
+    document.version = version;
   }
 
   private async request(method: string, params: unknown): Promise<unknown> {

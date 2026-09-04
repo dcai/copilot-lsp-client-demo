@@ -9,6 +9,7 @@ type CliOptions = {
   workspace?: string;
   editorVersion: string;
   acceptRate: number;
+  acceptMode: 'full' | 'partial';
 };
 
 const parseArgs = (argv: string[]): { command: string; options: CliOptions } => {
@@ -16,6 +17,7 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
   const options: CliOptions = {
     editorVersion: '0.12.1',
     acceptRate: 0,
+    acceptMode: 'full',
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -62,6 +64,12 @@ const parseArgs = (argv: string[]): { command: string; options: CliOptions } => 
       index += 1;
       continue;
     }
+
+    if (current === '--accept-mode' && (next === 'full' || next === 'partial')) {
+      options.acceptMode = next;
+      index += 1;
+      continue;
+    }
   }
 
   return { command, options };
@@ -79,6 +87,7 @@ Options:
   --editor-version <ver>   Editor version reported to Copilot. Defaults to 0.12.1.
   --accept-first           Always accept the first completion after showing it.
   --accept-rate <0-100>    Accept the first completion at the given percentage rate.
+  --accept-mode <mode>     Acceptance telemetry mode: full or partial. Defaults to full.
 `);
 };
 
@@ -236,8 +245,8 @@ const run = async (): Promise<void> => {
         console.log('Marked first completion as shown.');
 
         if (shouldAcceptCompletion(acceptRate)) {
-          await client.acceptCompletion(firstItem);
-          console.log(`Accepted first completion via workspace/executeCommand (rate=${acceptRate}%).`);
+          await client.acceptCompletion(document, firstItem, options.acceptMode);
+          console.log(`Accepted first completion (mode=${options.acceptMode}, rate=${acceptRate}%).`);
         } else if (acceptRate > 0) {
           console.log(`Skipped accepting first completion (rate=${acceptRate}%).`);
         }

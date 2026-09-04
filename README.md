@@ -134,6 +134,7 @@ Notes:
 - the client sends `textDocument/didShowCompletion` for the first result
 - add `--accept-first` to always accept the first suggestion
 - add `--accept-rate <0-100>` to accept the first suggestion at a percentage rate
+- add `--accept-mode partial` to simulate partial acceptance; the default mode is `full`
 
 ## Good test example
 
@@ -166,16 +167,19 @@ If you want to simulate the user accepting the first suggestion too:
 bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-first
 ```
 
-If you want a partial acceptance rate instead:
+If you want to simulate partial acceptance while keeping a percentage-based acceptance rate:
 
 ```bash
-bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-rate 90
+bun run complete --file fixtures/sample.ts --line 8 --character 2 --accept-rate 65 --accept-mode partial
 ```
 
 That will:
 - request inline completions
 - mark the first one as shown
-- call `workspace/executeCommand` for the first completion item when the acceptance check passes
+- accept the first completion 65% of the time
+- call `workspace/executeCommand` for full acceptance when the item provides a command
+- send `textDocument/didPartiallyAcceptCompletion` for partial acceptance or items without a command
+- update the in-memory document and send `textDocument/didChange` after acceptance
 
 ## What the CLI sends
 
@@ -185,8 +189,12 @@ The client identifies itself during `initialize` as:
 ```json
 {
   "editorInfo": {
-    "name": "neovim",
+    "name": "Neovim",
     "version": "0.12.1"
+  },
+  "editorPluginInfo": {
+    "name": "copilot.vim",
+    "version": "1.59.0"
   }
 }
 ```
@@ -205,6 +213,10 @@ For completion testing, the client does this:
 4. `textDocument/didOpen`
 5. `textDocument/didFocus`
 6. `textDocument/inlineCompletion`
+7. `textDocument/didShowCompletion`
+8. acceptance telemetry (`workspace/executeCommand` or `textDocument/didPartiallyAcceptCompletion`)
+9. `textDocument/didChange` after an accepted completion
+10. `textDocument/didClose` and LSP shutdown when the CLI exits
 
 ## Raw logs
 This CLI prints raw client/server JSON-RPC messages to stdout so you can inspect exactly what happened.
@@ -213,6 +225,6 @@ That means it is ugly on purpose. Like a wrench. A beautiful, violent wrench.
 
 ## Caveats
 - auth success can take a few seconds after the browser flow finishes
-- the CLI does not patch the file on disk; it only asks the server for completions
+- the CLI does not patch the file on disk; accepted completions update the in-memory document and emit `textDocument/didChange`
 - there is no visual-selection API here; this harness tests cursor-based inline completion
 - if the server changes undocumented custom methods, this harness may need small updates

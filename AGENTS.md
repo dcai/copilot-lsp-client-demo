@@ -36,8 +36,10 @@ This repo is a thin CLI harness around `@github/copilot-language-server`.
    - `textDocument/didOpen`
    - `textDocument/didFocus`
    - `textDocument/inlineCompletion`
-   - optional `textDocument/didShowCompletion`
-   - optional `workspace/executeCommand` for acceptance telemetry
+   - `textDocument/didShowCompletion`
+   - acceptance telemetry through `workspace/executeCommand` or `textDocument/didPartiallyAcceptCompletion`
+   - `textDocument/didChange` after an accepted completion
+   - `textDocument/didClose` and LSP shutdown on exit
 
 ### File responsibilities
 - `src/cli.ts`
@@ -59,7 +61,8 @@ This repo is a thin CLI harness around `@github/copilot-language-server`.
 
 ## Things that are easy to miss
 - The project does not edit files on disk; it only opens documents in-memory via LSP and requests suggestions.
-- `complete --accept-first` does not apply the returned text to the fixture. It only sends Copilot “shown” and “accepted” telemetry-style events.
+- Accepted completions update only the in-memory document; the fixture on disk is never changed.
+- `--accept-rate` controls whether the shown completion is accepted; `--accept-mode partial` selects partial-acceptance telemetry without forcing every run to accept.
 - Language support is extension-based in `detectLanguageId()`. If a new fixture type is added, update that mapping and the shell script together.
 - Raw JSON-RPC logging is intentional and useful for debugging protocol regressions. Avoid removing it unless the task is specifically about changing logging behavior.
 - `printHelp()` in `src/cli.ts` still mentions `node dist/cli.js`; if updating CLI UX or docs, keep runtime examples aligned with the Bun-first workflow.
