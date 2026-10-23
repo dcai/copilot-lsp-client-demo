@@ -260,7 +260,7 @@ set +e
     --no-remote \
     --no-remote-export \
     --yolo \
-    --model gpt-5.6-luna \
+    --model gpt-6-luna \
     -p "$PROMPT" \
     --silent >>"$DEBUG_LOG" 2>&1
 COPILOT_EXIT_CODE="$?"
