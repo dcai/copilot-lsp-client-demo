@@ -11,6 +11,7 @@ export TMPDIR="${TMPDIR:-/tmp}"
 
 REPO_DIR="$HOME/iag/copilot-lsp-stats"
 COPILOT_BIN="$HOME/.local/bin/copilot"
+COPILOT_MODEL="gpt-6-luna"
 OUTPUT_DIR="$REPO_DIR/void"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
 DEBUG_LOG="$OUTPUT_DIR/void-run-debug.log"
@@ -250,19 +251,23 @@ printf '%s\n' "$PROMPT" | sed -n '1,20p' | tee -a "$DEBUG_LOG"
 log_debug "prompt preview end"
 cd "$WORK_DIR"
 log_debug "copilot_cwd=$(pwd)"
-log_debug "running copilot command..."
+COPILOT_COMMAND=(
+    "$COPILOT_BIN"
+    -C "$WORK_DIR"
+    --disable-builtin-mcps
+    --no-custom-instructions
+    --no-remote
+    --no-remote-export
+    --yolo
+    --model "$COPILOT_MODEL"
+    -p "$PROMPT"
+    --silent
+)
+printf -v COPILOT_COMMAND_LOG '%q ' "${COPILOT_COMMAND[@]}"
+log_debug "running copilot command: ${COPILOT_COMMAND_LOG}>>$(printf '%q' "$DEBUG_LOG") 2>&1"
 
 set +e
-"$COPILOT_BIN" \
-    -C "$WORK_DIR" \
-    --disable-builtin-mcps \
-    --no-custom-instructions \
-    --no-remote \
-    --no-remote-export \
-    --yolo \
-    --model gpt-6-luna \
-    -p "$PROMPT" \
-    --silent >>"$DEBUG_LOG" 2>&1
+"${COPILOT_COMMAND[@]}" >>"$DEBUG_LOG" 2>&1
 COPILOT_EXIT_CODE="$?"
 set -e
 
